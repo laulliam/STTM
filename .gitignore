@@ -2,3 +2,5 @@ data/
 __pycache__/
 .idea/
 *.pyc
+vis/client/node_modules
+vis/server/node_modules
