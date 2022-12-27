@@ -1,5 +1,5 @@
 <template>
-  <div id="mapContainer"></div>
+  <div id="mapContainer" ref="baseMap"></div>
 </template>
 
 <script>
@@ -10,150 +10,118 @@
 //Geojson https://www.rfc-editor.org/rfc/rfc7946#section-1.1
 import mapboxgl from 'mapbox-gl';
 import axios from 'axios';
+import * as d3 from 'd3'
 
 export default {
   name: "BaseMap",
   data() {
     return {
-      ACCESSTOKEN: 'pk.eyJ1Ijoid2VpeGluemhhbyIsImEiOiJja2ZucTB1c2cxb2c4MnJwamxiaXFpY2JxIn0.AZ2oSPWyf9fV0_RXXyMIFg',
+      ACCESS_TOKEN: 'pk.eyJ1Ijoid2VpeGluemhhbyIsImEiOiJja2ZucTB1c2cxb2c4MnJwamxiaXFpY2JxIn0.AZ2oSPWyf9fV0_RXXyMIFg',
+      MAP_CONTAINER: null,
       INITDATA: 0,
-      mapdata:{},
-      MAP_CONTAINER: null
+      topic_data: []
     };
   },
-  beforeCreate(){
-    let that = this
-    axios.get('http://localhost:3000/read-csv').then((res) => {
-      //['ID', 'lat', 'lng', 'passengers', 'timestamp']
-      that.INITDATA = res.data.initdata
-      that.mapdata = res.data
-      console.log(that.mapdata)
+  beforeCreate() {
+    axios.get('/api/topic', {
+      params: {
+        t: 6
+      }
+    }).then(res => {
+      //console.log(res.data.data)
+      this.topic_data = res.data.data
     }).catch((err) => {
       console.log(err)
     })
+
+    // axios.all()
   },
   watch: {
-    INITDATA(newVal, oldVal){
-      //通过beforeCreate异步请求后台数据，当判断指标INITDATA获取到后台传递的信号后，调用地图初始化函数
-      if(newVal == 1){
-        console.log('async data')
-        this.initMap()
-      }
-    }
   },
   mounted() {
+    this.initMap()
+    this.showTopic()
   },
-  methods:{
-    initMap(){
-      console.log('initMap')
-      let that = this
-
-      //Prepare data
-      let MAP_INIT_CENTER = [this.mapdata.data[0][2], this.mapdata.data[0][1]],
-      _lngIndex = 2, //lng index in array
-      _LatIndex = 1, //lat index in array
-      _isTra = 1, // 1:draw trajectory; 0:not draw trajectory
-      _isPoints = 1 // 1:draw points; 0:not draw points
-
-      let TraGeoJson = this.getTrajectoryFeatures(_lngIndex, _LatIndex),
-        PoiGeoJson = this.getPointsFeatures(_lngIndex, _LatIndex)
-      console.log('GeoJson:', TraGeoJson)
-      
-      //InitMap
-      mapboxgl.accessToken = this.ACCESSTOKEN;
-      that.MAP_CONTAINER = new mapboxgl.Map({
-        container: "mapContainer",
-        style: "mapbox://styles/mapbox/streets-v11",
-        center: MAP_INIT_CENTER,
+  methods: {
+    initMap() {
+      console.log('Init Map')
+      mapboxgl.accessToken = this.ACCESS_TOKEN;
+      this.MAP_CONTAINER = new mapboxgl.Map({
+        container: this.$refs.baseMap,
+        style: "mapbox://styles/mapbox/dark-v9",
+        center: [103.939665499999998, 30.6615715],
         zoom: 10,
-        projection: 'equirectangular'
+        projection: 'equirectangular',
+        // pitch: 50
       });
-      const nav = new mapboxgl.NavigationControl();
-      that.MAP_CONTAINER.addControl(nav, "top-right");
 
-      //Add start point
-      const marker = new mapboxgl.Marker()
-          .setLngLat(MAP_INIT_CENTER)
-          .addTo(that.MAP_CONTAINER);
-      
-      //Add navigator
-      const geolocate = new mapboxgl.GeolocateControl({
-          positionOptions: {
-              enableHighAccuracy: true
-          },
-          trackUserLocation: true
-      });
-      that.MAP_CONTAINER.addControl(geolocate, "top-right")
+      // this.MAP_CONTAINER.on('click',(e)=>{
+      //     console.log(e.lngLat);
+      // })
+    },
 
-      //Add Lines
-      that.MAP_CONTAINER.on('load', ()=> {
-
-        that.MAP_CONTAINER.addSource('test-trajectory-line', {
-          'type': 'geojson',
-          'data': TraGeoJson
-        })
-        that.MAP_CONTAINER.addSource('test-trajectory-points', {
-          'type': 'geojson',
-          'data': PoiGeoJson
-        })
-
-        that.MAP_CONTAINER.addLayer({
-          'id': 'trajectory-line',
-          'type': 'line',
-          'source': 'test-trajectory-line',
-          'paint': {
-            'line-color': '#000000'
-          }
-        })
-
-        that.MAP_CONTAINER.addLayer({
-          'id': 'trajectory-points',
-          'type': 'circle',
-          'source': 'test-trajectory-points',
-          'paint': {
-            'circle-color': '#333333',
-            'circle-opacity': 0.5,
-            'circle-radius': 2
-          }
-        })
-        
-      })
-      //Add 
+    showTopic() {
     
-    },
-    getTrajectoryFeatures(lng, lat){
-      return {
-        "type": 'Feature',
-        "geometry": {
-          "type": "LineString",
-          "coordinates": this.mapdata.data.map((d) => {return [d[lng], d[lat]]})
-        },
-        "properties": {}
-      }
-      return traGeojson
-    },
-    getPointsFeatures(lng, lat){
-      return {
-        "type": 'Feature',
-        "geometry": {
-          "type": "MultiPoint",
-          "coordinates": this.mapdata.data.map((d) => {return [d[lng], d[lat]]})
-        },
-        "properties": {}
-      }
+      this.MAP_CONTAINER.on('load', () => {
+
+        console.log(this.topic_data)
+
+        let points = [];
+        // let colors = ['#5D22BD', '#CE009B', '#FF2D71', '#FF7B50', '#4cff3d']
+        var colourSet = d3.scaleOrdinal(d3.schemePaired);
+        var colorScale = d3.scaleOrdinal(d3.schemePRGn)
+        // 设置一个线性比例尺将节点个数映射到[0,1]中
+        let scale = d3.scaleLinear().domain([0, 17]).range([0,1])
+
+
+        for(let i =0; i<18; i++){
+          this.topic_data[i].data.forEach(d => {
+          points.push({
+            "type": "Feature",
+            "properties": {
+              // "color": colourSet(this.topic_data[i].id),
+              "color": d3.interpolateTurbo(scale(this.topic_data[i].id)),
+              "opacity": 0.8,
+              "radius": 2
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [d[2][1], d[2][0]]
+            }
+          });
+        });
+        }
+
+        this.MAP_CONTAINER.addSource("points_source", {
+          "type": "geojson",
+          'data': {
+            "type": "FeatureCollection",
+            "features": points
+          }
+        });
+        this.MAP_CONTAINER.addLayer({
+          'id': 'points_layer',
+          'source': 'points_source',
+          "type": "circle",
+          'layout': {},
+          'paint': {
+            'circle-color': ['get', 'color'],
+            'circle-opacity': ['get', 'opacity'],
+            'circle-radius': ['get', 'radius']
+          }
+        });
+      });
     }
+
+
+
   }
 };
 </script>
 
-
-
-
-
 <style scoped>
 #mapContainer {
-    width: 500px;
-    height: 500px;
-    border: 2px black solid;
+  width: 100%;
+  height: 100%;
 }
 </style>
