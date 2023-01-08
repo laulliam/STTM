@@ -1,5 +1,5 @@
 <template>
-  <div id="mapContainer" ref="baseMap"></div>
+  <div id="mapContainer"></div>
 </template>
 
 <script>
@@ -9,108 +9,165 @@
 //mapbox expression https://docs.mapbox.com/mapbox-gl-js/style-spec/expressions/#types
 //Geojson https://www.rfc-editor.org/rfc/rfc7946#section-1.1
 import mapboxgl from 'mapbox-gl';
-import axios from 'axios';
-import * as d3 from 'd3'
+import {MapTools} from './MapTools.js'
+import {DataManager} from './DataManager.js'
 
 export default {
   name: "BaseMap",
   data() {
     return {
-      ACCESS_TOKEN: 'pk.eyJ1Ijoid2VpeGluemhhbyIsImEiOiJja2ZucTB1c2cxb2c4MnJwamxiaXFpY2JxIn0.AZ2oSPWyf9fV0_RXXyMIFg',
-      MAP_CONTAINER: null,
+      ACCESSTOKEN: 'pk.eyJ1Ijoid2VpeGluemhhbyIsImEiOiJja2ZucTB1c2cxb2c4MnJwamxiaXFpY2JxIn0.AZ2oSPWyf9fV0_RXXyMIFg',
       INITDATA: 0,
-      topic_data: []
+      TOPICMODEL_INFO: null,
+      MAP_CONTAINER: null,
+      MAP_INIT_CENTER: null
     };
   },
-  beforeCreate() {
-    axios.get('/api/topic', {
-      params: {
-        t: 6
-      }
-    }).then(res => {
-      //console.log(res.data.data)
-      this.topic_data = res.data.data
+  beforeCreate(){
+    let that = this
+    DataManager.getTopicModelInfo().then((res) => {
+      //['ID', 'lat', 'lng', 'passengers', 'timestamp']
+      console.log(res)
+      that.INITDATA = res.data.data.initdata
+      that.TOPICMODEL_INFO = res.data.data
+      that.MAP_INIT_CENTER = res.data.data.center
     }).catch((err) => {
       console.log(err)
     })
 
-    // axios.all()
   },
   watch: {
+    INITDATA(newVal, oldVal){
+      //通过beforeCreate异步请求后台数据，当判断指标INITDATA获取到后台传递的信号后，调用地图初始化函数
+      if(newVal == 1){
+        console.log('async data')
+        this.initMap()
+      }
+    }
   },
   mounted() {
-    this.initMap()
-    this.showTopic()
   },
-  methods: {
-    initMap() {
-      console.log('Init Map')
-      mapboxgl.accessToken = this.ACCESS_TOKEN;
-      this.MAP_CONTAINER = new mapboxgl.Map({
-        container: this.$refs.baseMap,
-        style: "mapbox://styles/mapbox/dark-v9",
-        center: [103.939665499999998, 30.6615715],
-        zoom: 10,
-        projection: 'equirectangular',
-        // pitch: 50
+  methods:{
+    initMap(){
+      console.log('initMap')
+      //Prepare data
+      let that = this
+      
+      //InitMap
+      mapboxgl.accessToken = this.ACCESSTOKEN;
+      that.MAP_CONTAINER = new mapboxgl.Map({
+        container: "mapContainer",
+        style: "mapbox://styles/mapbox/dark-v11",
+        center: that.MAP_INIT_CENTER,
+        zoom: 10.2,
+        projection: 'equirectangular'
       });
 
-      // this.MAP_CONTAINER.on('click',(e)=>{
-      //     console.log(e.lngLat);
-      // })
+      this.MapTools = new MapTools(that.MAP_CONTAINER, that.TOPICMODEL_INFO)
+      this.MapTools.color()
+      //Add 
+      //this.maptest()
+      this.topicLines()
+      this.AlltopicLines()
     },
-
-    showTopic() {
-    
-      this.MAP_CONTAINER.on('load', () => {
-
-        console.log(this.topic_data)
-
-        let points = [];
-        // let colors = ['#5D22BD', '#CE009B', '#FF2D71', '#FF7B50', '#4cff3d']
-        var colourSet = d3.scaleOrdinal(d3.schemePaired);
-        var colorScale = d3.scaleOrdinal(d3.schemePRGn)
-        // 设置一个线性比例尺将节点个数映射到[0,1]中
-        let scale = d3.scaleLinear().domain([0, 17]).range([0,1])
-
-
-        for(let i =0; i<18; i++){
-          this.topic_data[i].data.forEach(d => {
-          points.push({
-            "type": "Feature",
-            "properties": {
-              // "color": colourSet(this.topic_data[i].id),
-              "color": d3.interpolateTurbo(scale(this.topic_data[i].id)),
-              "opacity": 0.8,
-              "radius": 2
-            },
-            "geometry": {
-              "type": "Point",
-              "coordinates": [d[2][1], d[2][0]]
-            }
-          });
-        });
+    getTrajectoryFeatures(lng, lat){
+      return {
+        "type": 'Feature',
+        "geometry": {
+          "type": "LineString",
+          "coordinates": this.mapdata.data.map((d) => {return [d[lng], d[lat]]})
+        },
+        "properties": {}
+      }
+    },
+    getPointsFeatures(lng, lat){
+      return {
+        "type": 'Feature',
+        "geometry": {
+          "type": "MultiPoint",
+          "coordinates": this.mapdata.data.map((d) => {return [d[lng], d[lat]]})
+        },
+        "properties": {}
+      }
+    },
+    getMultiTrajectoryFeatures(coordinates, params){
+      
+        let res = {
+          "type": 'Feature',
+          "geometry": {
+            "type": "MultiLineString",
+            "coordinates": []
+          },
+          "properties": {}
         }
-
-        this.MAP_CONTAINER.addSource("points_source", {
-          "type": "geojson",
-          'data': {
-            "type": "FeatureCollection",
-            "features": points
-          }
-        });
-        this.MAP_CONTAINER.addLayer({
-          'id': 'points_layer',
-          'source': 'points_source',
-          "type": "circle",
-          'layout': {},
-          'paint': {
-            'circle-color': ['get', 'color'],
-            'circle-opacity': ['get', 'opacity'],
-            'circle-radius': ['get', 'radius']
-          }
-        });
+      },
+    maptest(){
+      let that = this,
+          _lngIndex = 2, //lng index in array
+          _LatIndex = 1, //lat index in array
+          _isTra = 1, // 1:draw trajectory; 0:not draw trajectory
+          _isPoints = 1 // 1:draw points; 0:not draw points
+      
+      let TraGeoJson = this.getTrajectoryFeatures(_lngIndex, _LatIndex),
+        PoiGeoJson = this.getPointsFeatures(_lngIndex, _LatIndex)
+      
+      const nav = new mapboxgl.NavigationControl();
+        that.MAP_CONTAINER.addControl(nav, "top-right");
+      
+      //Add navigator
+      const geolocate = new mapboxgl.GeolocateControl({
+          positionOptions: {
+              enableHighAccuracy: true
+          },
+          trackUserLocation: true
       });
+      that.MAP_CONTAINER.addControl(geolocate, "top-right")
+
+      //Add Lines
+      console.log({
+        'type': 'geojson',
+        'data': TraGeoJson
+      })
+      that.MapTools.drawLines('test-trajectory-line', 'trajectory-line', TraGeoJson, {
+          'line-color': '#000000'
+      })
+      that.MapTools.drawPoints('test-trajectory-points', 'trajectory-points', PoiGeoJson, {
+          'circle-color': '#333333',
+          'circle-opacity': 0.5,
+          'circle-radius': 2
+      })
+    },
+    topicLines(){
+      let that = this,
+        topicIdList = [...Array(10).keys()],
+        //topicIdList = [0,1],
+        timeId = 0,
+        topn = 200,
+        convertLatLng = 1
+      
+      DataManager.getTimesliceTopic(topicIdList, timeId, topn, convertLatLng).then(res => {
+        let content = res.data.data
+        console.log(content)
+        let sliceTopic = content.data.map((d) => {
+          return d.topic.map((v) => {
+            return [v[3], v[4]] //lng lat
+          })
+        })
+        let arrowSource = that.MapTools.getSTSource(sliceTopic, content.topicIdList)
+
+        that.MapTools.drawLines('topicLine', 'topicLine-layer', arrowSource, {
+          'line-color': ['get', 'color'],
+          'line-opacity': 0.5
+        })
+      })
+    },
+    AlltopicLines(){
+      let that = this,
+      convertLatLng = 1
+      // DataManager.getOneDayTopic(convertLatLng).then(res => {
+      //   console.log(res.data)
+      // })
+
     }
 
 
@@ -121,7 +178,8 @@ export default {
 
 <style scoped>
 #mapContainer {
-  width: 100%;
-  height: 100%;
+    width: 1000px;
+    height: 1000px;
+    border: 2px black solid;
 }
 </style>

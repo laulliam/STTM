@@ -41,5 +41,6 @@ def GirdID2LngLat(gird_id):
     curr_row = int(gird_id/row_num)
     curr_column = gird_id % column_num
 
-    return [LATMIN + gird_lat_span * (curr_row + 0.5 ), LNGMIN + gird_lng_span * (curr_column + 0.5)]
+    return [LNGMIN + gird_lng_span * (curr_column + 0.5), LATMIN + gird_lat_span * (curr_row + 0.5 )]
+    # return [LATMIN + gird_lat_span * (curr_row + 0.5 ), LNGMIN + gird_lng_span * (curr_column + 0.5)]
 

@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 vis/client/node_modules
 vis/server/node_modules
+model/chengdutaxi_process/
