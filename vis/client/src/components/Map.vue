@@ -128,9 +128,11 @@ export default {
         'type': 'geojson',
         'data': TraGeoJson
       })
-      that.MapTools.drawLines('test-trajectory-line', 'trajectory-line', TraGeoJson, {
+      that.MapTools.addLines('test-trajectory-line', 'trajectory-line', TraGeoJson, {
           'line-color': '#000000'
       })
+
+
       that.MapTools.drawPoints('test-trajectory-points', 'trajectory-points', PoiGeoJson, {
           'circle-color': '#333333',
           'circle-opacity': 0.5,
@@ -155,12 +157,23 @@ export default {
         })
         let arrowSource = that.MapTools.getSTSource(sliceTopic, content.topicIdList)
 
-        that.MapTools.drawLines('topicLine', 'topicLine-layer', arrowSource, {
+        that.MapTools.addLines('topicLine', 'topicLine-layer', arrowSource, {
           'line-color': ['get', 'color'],
           'line-opacity': 0.5
         })
+
+        // that.MapTools.deleteLines('topicLine', 'topicLine-layer')
+
+        // that.MapTools.getSourceById('topicLine', (obj)=>{
+        //   console.log(obj)
+        // })
+
+        // that.MapTools.getLayerById('topicLine-layer', (obj)=>{
+        //   console.log(obj)
+        // })
       })
     },
+    
     AlltopicLines(){
       let that = this,
       convertLatLng = 1

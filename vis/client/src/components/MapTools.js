@@ -1,25 +1,57 @@
 import * as d3 from 'd3'
+
+// 根据sourceid和layerid增加source、layer，删除source和layer，
+// 查找source和layer的方法。同时在Maptools的constructor里维护一个对象，专门存放已有的轨迹线
+
 let MapTools = class {
+
   constructor(mapcon, topicmodelinfo) {
     this.con = mapcon
     this.TopicMoldeInfo = topicmodelinfo
     this.indexlinear = null
     this.colorDict = {}
+    this.tracks = []
   }
-  drawLines(source, layerid, data, paint, layout = {}) {
-    let that = this
+
+  addLines(source_id, layer_id, data, paint, layout = {}) {
     this.con.on('load', ()=>{
-      that.con.addSource(source, {
+      this.con.addSource(source_id, {
         'type': 'geojson',
         'data': data
       })
 
-      that.con.addLayer({
-        'id': layerid,
+      this.con.addLayer({
+        'id': layer_id,
         'type': 'line',
-        'source': source,
+        'source': source_id,
         'paint': paint
       })
+    })
+  }
+
+  deleteLines(source_id, layer_id) {
+    this.con.on('load', ()=>{
+
+      if (this.con.getLayer(layer_id)) {
+        this.con.removeLayer(layer_id);
+      }
+
+      if(this.con.getSource(source_id)){
+        this.con.removeSource(source_id)
+      }
+
+    })
+  }
+
+  getSourceById(source_id, callback){
+    this.con.on('load', ()=>{
+      callback(this.con.getSource(source_id))      
+    })
+  }
+
+  getLayerById(layer_id, callback){
+    this.con.on('load', ()=>{
+      callback(this.con.getLayer(layer_id))
     })
   }
 
@@ -39,6 +71,7 @@ let MapTools = class {
       })
     })
   }
+
   getArrowLine(sourceDestinationPairs) {
 
     sourceDestinationPairs = [
@@ -104,6 +137,7 @@ let MapTools = class {
 
     return { source, style };
   }
+
   getSTSource(data = arrows, idlist = null) {
     //getSliceTopicSource
     var source = {
