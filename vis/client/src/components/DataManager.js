@@ -10,7 +10,7 @@ let DataManager = class {
         for(let key of Object.keys(data)){
             params.append(key, data[key])
         }
-        return axios.post('http://localhost:5000/exampleTrajectory', params, {
+        return axios.post('/api/exampleTrajectory', params, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -31,7 +31,7 @@ let DataManager = class {
             params.append(key, data[key])
         }
         
-        return axios.post('http://localhost:5000/topicEvolution', params, {
+        return axios.post('/api/topicEvolution', params, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -51,7 +51,7 @@ let DataManager = class {
             params.append(key, data[key])
         }
 
-        return axios.post('http://localhost:5000/timesliceTopic', params, {
+        return axios.post('/api/timesliceTopic', params, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -59,7 +59,7 @@ let DataManager = class {
     }
 
     static getTopicModelInfo () {
-        return axios.post('http://localhost:5000/getTopicModelInfo', {}, {
+        return axios.post('/api/getTopicModelInfo', {}, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -75,7 +75,7 @@ let DataManager = class {
         for(let key of Object.keys(data)){
             params.append(key, data[key])
         }
-        return axios.post('http://localhost:5000/getOneDayTopic', params, {
+        return axios.post('/api/getOneDayTopic', params, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
