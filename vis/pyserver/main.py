@@ -10,7 +10,8 @@ import ast
 
 app = Flask(__name__)
 CORS(app, resources=r'/*')	# 注册CORS, "/*" 允许访问所有api
-MODEL_FILEPATH = "C:\\code\\topic modeling dtm\\src\\model\\"
+# MODEL_FILEPATH = "C:\\code\\topic modeling dtm\\src\\model\\"
+MODEL_FILEPATH = "/Users/laulliam/Projects/STTM/model/chengdutaxi_process/"
 MODEL_FILENAME = 'model-stayFalse20140803_sequence_full'
 dtmtools = DTMTools(MODEL_FILEPATH + MODEL_FILENAME)
 
